@@ -1,0 +1,28 @@
+Bootstrap: docker
+From: debian
+
+
+%help
+
+This will run finch
+
+%labels
+
+    Maintainer NadiyaSitdykova
+
+    Version v1.0
+
+%post
+    
+    apt-get update -y && apt-get install -y --no-install-recommends ca-certificates curl file sudo gcc libc-dev
+
+    curl -sSf https://static.rust-lang.org/rustup.sh | sh
+
+    cargo install finch
+
+    cp /root/.cargo/bin/finch /usr/local/bin/
+
+%runscript
+    
+    exec finch "$@"
+

@@ -1,0 +1,33 @@
+Bootstrap: docker
+From: debian
+
+
+%help
+
+This will run gappa.
+
+
+%labels
+
+    Maintainer NadiyaSitdykova
+
+    Version v1.0
+
+%post
+
+    apt-get update -y && apt-get install -y --no-install-recommends git make cmake gcc g++
+
+    cd /opt
+    
+    git config --global http.sslVerify false
+
+    # clone the github repo
+    git clone --recursive https://github.com/lczech/gappa.git
+     
+    cd gappa
+
+    make
+
+%runscript
+
+    exec /opt/gappa/bin/gappa "$@"
