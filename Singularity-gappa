@@ -1,0 +1,16 @@
+Bootstrap: docker
+From: ubuntu:18.04
+
+%post
+    apt-get -y update
+    apt-get -y install gcc build-essential cmake git
+    mkdir -p /usr/local/src
+    cd /usr/local/src
+    test -d gappa || git clone --recursive https://github.com/lczech/gappa.git
+    cd /usr/local/src/gappa
+    make -j10
+    cp /usr/local/src/gappa/bin/gappa /usr/local/bin
+    # TODO: remove repo, build artifacts, extra packages?
+
+%runscript
+    /usr/local/bin/gappa "$@"
