@@ -14,18 +14,26 @@ env = Environment(
     out='output',
     cwd=os.getcwd(),
     epa=('singularity run --pwd $cwd -B $cwd,$input epa.simg'),
-    gappa=('singularity run --pwd $cwd -B $cwd,$input gappa.simg')
+    gappa=('singularity run --pwd $cwd -B $cwd,$input gappa.simg'),
+    taxit=('singularity exec '
+           '--pwd $cwd -B $cwd,$input '
+           '/molmicro/common/singularity/taxtastic-0.8.5-singularity2.4.img '
+           'taxit')
 )
 
+##### inputs #######
+# TODO: move to a config file
+
 refpkg = '/mnt/disk15/molmicro/working/ngh2/2018-08-08-bei-refset/mkrefpkg/output/bei-hm27/bei-hm27-1.0.refpkg'
-taxon_file = '$input/mkrefpkg/output/bei-hm27/mothur_taxonomy.txt'
 
 # merged alignment
 # TODO: add cmmerge to pipeline
-merged_msa='$input/yapp/output/merged.fasta'
+merged_msa = '$input/yapp/output/merged.fasta'
 
 # known classifications
-seq_info='$input/data/seq_info.csv'
+seq_info = '$input/data/seq_info.csv'
+
+##### end inputs ###
 
 def get_refpkg_contents(refpkg):
     with open(join(refpkg, 'CONTENTS.json')) as jfile:
@@ -33,17 +41,23 @@ def get_refpkg_contents(refpkg):
         return {k: join(refpkg, v) for k, v in files.items()}
 
 
-# TODO: generate mothur_taxonomy from refpkg
-
 refpkg_files = get_refpkg_contents(refpkg)
 ref_msa = refpkg_files['aln_fasta']
 tree = refpkg_files['tree']
 tree_stats = refpkg_files['tree_stats']
+ref_info = refpkg_files['seq_info']
+ref_taxonomy = refpkg_files['taxonomy']
 
 qry_msa = env.Command(
     target='$out/seqs_aln.fasta',
     source=[seq_info, merged_msa],
     action='python bin/get_qry_msa.py ${SOURCES[0]} ${SOURCES[1]} > $TARGET'
+)
+
+taxon_file = env.Command(
+    target='$out/taxonomy.txt',
+    source=[ref_taxonomy, ref_info],
+    action='$taxit lineage_table $SOURCES --taxonomy-table $TARGET'
 )
 
 epa_placements, epa_log = env.Command(
