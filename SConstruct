@@ -1,5 +1,8 @@
-from SCons.Script import Command
 import os
+import json
+from os.path import join
+
+from SCons.Script import Command
 
 vars = Variables()
 vars.Add('out', '', 'output')
@@ -14,13 +17,8 @@ env = Environment(
     gappa=('singularity run --pwd $cwd -B $cwd,$input gappa.simg')
 )
 
-# refpkg components
-# TODO: wrapper script to provide paths of refpkg contents given refpkg as a single argument
-# TODO: generate mothur_taxonomy from refpkg
-ref_msa='$input/mkrefpkg/output/bei-hm27/bei-hm27-1.0.refpkg/alignment.fasta'
-tree='$input/mkrefpkg/output/bei-hm27/bei-hm27-1.0.refpkg/tree_raxml.tre'
-tree_stats='$input/mkrefpkg/output/bei-hm27/bei-hm27-1.0.refpkg/tree_raxml.stats'
-taxon_file='$input/mkrefpkg/output/bei-hm27/mothur_taxonomy.txt'
+refpkg = '/mnt/disk15/molmicro/working/ngh2/2018-08-08-bei-refset/mkrefpkg/output/bei-hm27/bei-hm27-1.0.refpkg'
+taxon_file = '$input/mkrefpkg/output/bei-hm27/mothur_taxonomy.txt'
 
 # merged alignment
 # TODO: add cmmerge to pipeline
@@ -28,6 +26,19 @@ merged_msa='$input/yapp/output/merged.fasta'
 
 # known classifications
 seq_info='$input/data/seq_info.csv'
+
+def get_refpkg_contents(refpkg):
+    with open(join(refpkg, 'CONTENTS.json')) as jfile:
+        files = json.load(jfile)['files']
+        return {k: join(refpkg, v) for k, v in files.items()}
+
+
+# TODO: generate mothur_taxonomy from refpkg
+
+refpkg_files = get_refpkg_contents(refpkg)
+ref_msa = refpkg_files['aln_fasta']
+tree = refpkg_files['tree']
+tree_stats = refpkg_files['tree_stats']
 
 qry_msa = env.Command(
     target='$out/seqs_aln.fasta',
