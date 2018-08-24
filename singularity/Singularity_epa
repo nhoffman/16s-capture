@@ -1,0 +1,33 @@
+Bootstrap: docker
+From: debian
+
+
+%help
+
+This will run epa-ng.
+
+
+%labels
+
+    Maintainer NadiyaSitdykova
+
+    Version v1.0
+
+%post
+
+    apt-get update -y && apt-get install -y --no-install-recommends autotools-dev libtool flex bison cmake automake autoconf git make gcc g++
+
+    cd /opt
+    
+    git config --global http.sslVerify false
+
+    # clone the github repo
+    git clone --recursive https://github.com/Pbdas/epa-ng.git
+     
+    cd epa-ng
+
+    make
+
+%runscript
+
+    exec /opt/epa-ng/bin/epa-ng "$@"
