@@ -42,6 +42,24 @@ RANKS = OrderedDict(
 )
 
 
+def concat_names(taxnames, rank, sep='/', splitchar='_'):
+    """Heuristics for creating a sensible combination of species names."""
+
+    if len(taxnames) == 1:
+        return ' '.join(taxnames[0].split(splitchar))
+
+    splits = [x.split(splitchar) for x in taxnames]
+    if (rank == 'species'
+        and all(len(x) > 1 for x in splits)
+        and len(set(s[0] for s in splits)) == 1):
+        name = '%s %s' % (splits[0][0],
+                          sep.join(sorted('_'.join(s[1:]) for s in splits)))
+    else:
+        name = sep.join(' '.join(s) for s in splits)
+
+    return name
+
+
 def parse_line(x, ranks=RANKS):
     d = {}
     for key in ['lwr', 'fract', 'alwr', 'afract']:
@@ -76,7 +94,7 @@ def filter_lineages(lines, min_afract, min_total):
         grp = [line for line in grp if line['afract'] >= min_afract]
         likelihood = sum(line['afract'] for line in grp)
         if likelihood >= min_total:
-            tax_name = '/'.join(line['name'] for line in grp)
+            tax_name = concat_names([line['name'] for line in grp], rank=rank)
             yield (rank, tax_name, likelihood)
 
 
