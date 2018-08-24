@@ -106,9 +106,9 @@ def main(arguments):
     parser.add_argument('infile', help="Input file", type=argparse.FileType('r'))
     parser.add_argument('-o', '--outfile', help="Output file",
                         default=sys.stdout, type=argparse.FileType('w'))
-    parser.add_argument('--min-afract', type=float, default=0,
+    parser.add_argument('--min-afract', type=float, default=0.05,
                         help='minimum value for afract for each lineage [%(default)s]')
-    parser.add_argument('--min-total', type=float, default=0,
+    parser.add_argument('--min-total', type=float, default=0.1,
                         help='minimum sum of values of afract for all lineages in a rank [%(default)s]')
 
     args = parser.parse_args(arguments)
