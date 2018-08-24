@@ -48,6 +48,7 @@ tree_stats = refpkg_files['tree_stats']
 ref_info = refpkg_files['seq_info']
 ref_taxonomy = refpkg_files['taxonomy']
 
+# TODO: if we start with the query sequences and align, this becomes unnecessary
 qry_msa = env.Command(
     target='$out/seqs_aln.fasta',
     source=[seq_info, merged_msa],
