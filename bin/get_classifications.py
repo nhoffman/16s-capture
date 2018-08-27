@@ -27,18 +27,18 @@ import os
 import sys
 import argparse
 import csv
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from itertools import groupby
 from operator import itemgetter
 
 RANKS = OrderedDict(
-    k='kingdom',
-    p='phylum',
-    c='class',
-    o='order',
-    f='family',
-    g='genus',
-    s='species',
+    [('k', 'kingdom'),
+     ('p', 'phylum'),
+     ('c', 'class'),
+     ('o', 'order'),
+     ('f', 'family'),
+     ('g', 'genus'),
+     ('s', 'species')]
 )
 
 
@@ -61,6 +61,11 @@ def concat_names(taxnames, rank, sep='/', splitchar='_'):
 
 
 def parse_line(x, ranks=RANKS):
+    """Given a semicolon-delimited line from per_pquery_assign, return
+    a dict describing name, rank, classification, and alignment
+    statistics.
+
+    """
     d = {}
     for key in ['lwr', 'fract', 'alwr', 'afract']:
         d[key] = float(x.pop(0))
@@ -94,8 +99,11 @@ def filter_lineages(lines, min_afract, min_total):
         grp = [line for line in grp if line['afract'] >= min_afract]
         likelihood = sum(line['afract'] for line in grp)
         if likelihood >= min_total:
-            tax_name = concat_names([line['name'] for line in grp], rank=rank)
-            yield (rank, tax_name, likelihood)
+            yield {
+                'rank': rank,
+                'tax_name': concat_names([line['name'] for line in grp], rank=rank),
+                'likelihood': likelihood,
+            }
 
 
 def main(arguments):
@@ -104,48 +112,62 @@ def main(arguments):
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('infile', help="Input file", type=argparse.FileType('r'))
-    parser.add_argument('-f', '--full-lineages', help="output with one row per rank",
-                        type=argparse.FileType('w'))
     parser.add_argument('-c', '--classifications',
                         help="most specific classification for each sequence",
                         default=sys.stdout, type=argparse.FileType('w'))
+    parser.add_argument('-l', '--lineages',
+                        help="full lineage for each sequence",
+                        type=argparse.FileType('w'))
+    parser.add_argument('-k', '--krona',
+                        help="tabular output for krona plot using 'ktImportText'",
+                        type=argparse.FileType('w'))
     parser.add_argument('--min-afract', type=float, default=0.05,
                         help='minimum value for afract for each lineage [%(default)s]')
     parser.add_argument('--min-total', type=float, default=0.1,
-                        help='minimum sum of values of afract for all lineages in a rank [%(default)s]')
+                        help=('minimum sum of values of afract '
+                              'for all lineages in a rank [%(default)s]'))
 
     args = parser.parse_args(arguments)
     rank_orders = {rank: i for i, rank in enumerate(RANKS.values(), 1)}
 
     queries = get_queries(args.infile)
 
-    if args.full_lineages:
-        full_out = csv.DictWriter(
-            args.full_lineages,
-            fieldnames=['name', 'want_rank', 'rank', 'rank_order', 'tax_id', 'tax_name', 'likelihood'])
-        full_out.writeheader()
+    if args.classifications:
+        classif = csv.DictWriter(
+            args.classifications, fieldnames=['name', 'rank', 'tax_name', 'likelihood'],
+            extrasaction='ignore')
+        classif.writeheader()
 
-    classif = csv.DictWriter(
-        args.classifications, fieldnames=['name', 'rank', 'tax_name', 'likelihood'],
-        extrasaction='ignore')
-    classif.writeheader()
+    if args.lineages:
+        fieldnames = ['name', 'rank', 'tax_name', 'likelihood'] + list(RANKS.values())
+        lineages = csv.DictWriter(args.lineages, fieldnames=fieldnames)
+        lineages.writeheader()
 
+    if args.krona:
+        fieldnames = ['count'] + list(RANKS.values())
+        krona = csv.DictWriter(args.krona, fieldnames=fieldnames, delimiter='\t')
+
+    counts = Counter()
     for name, lines in queries:
-        lineages = filter_lineages(lines, min_afract=args.min_afract, min_total=args.min_total)
-        for rank, tax_name, likelihood in lineages:
-            row = dict(
-                name=name,
-                want_rank=rank,
-                rank=rank,
-                rank_order=rank_orders[rank],
-                tax_id=None,
-                tax_name=tax_name,
-                likelihood=likelihood,
-            )
-            if args.full_lineages:
-                full_out.writerow(row)
-        # the last row of each group contains the most specific classification
-        classif.writerow(row)
+        lineage = list(filter_lineages(
+            lines, min_afract=args.min_afract, min_total=args.min_total))
+
+        # last row provides the most specific classification
+        most_specific = dict(name=name, **lineage[-1])
+        ranks = tuple([(L['rank'], L['tax_name']) for L in lineage])
+        counts[ranks] += 1
+
+        if args.classifications:
+            classif.writerow(most_specific)
+
+        # tabular representation of entire lineage
+        if args.lineages:
+            lineages.writerow(dict(most_specific, **dict(ranks)))
+
+    if args.krona:
+        for lineage, count in counts.iteritems():
+            krona.writerow(dict(count=count, **dict(lineage)))
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

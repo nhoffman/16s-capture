@@ -1,0 +1,27 @@
+The processed.fasta files can be found in /molmicro/working/sara/capture_pipeline_output/180117run411human/ (barcodes 32-36, 0-10000 copies/organism diluted into human DNA, sheared to 150bp) and /molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/ (barcodes 25-29, 0-10000 copies/organism diluted into human DNA, sheared to 400bp).
+
+Each of the starting samples was 100ng total (human + mock community DNA, both sheared to either 150bp or 400bp).  The mock community DNA was added as follows:
+
+/molmicro/working/sara/capture_pipeline_output/180117run411human/
+
+411-32, 0 copies/organism (150bp)
+411-33, 10 copies/organism (150bp)
+411-34, 100 copies/organism (150bp)
+411-35, 1000 copies/organism (150bp)
+411-36, 10000 copies/organism (150bp)
+
+/molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/
+
+483-25, 0 copies/organism (400bp)
+483-26, 10 copies/organism (400bp)
+483-27, 100 copies/organism (400bp)
+483-28, 1000 copies/organism (400bp)
+483-29, 10000 copies/organism (400bp)
+
+#+BEGIN_SRC sh :results output
+ls /molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/483-29/*processed.fasta
+#+END_SRC
+
+#+RESULTS:
+: /molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/483-29/483-29_processed.fasta
+
