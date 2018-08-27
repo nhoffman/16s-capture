@@ -4,7 +4,7 @@
 
 see https://github.com/lczech/gappa/wiki/Subcommand:-assign
 
-Use afract for filtering, based on two criteria.
+Use "afract" for filtering, based on two criteria.
 
 1. keep lineages with afract => min-afract
 2. keep ranks with a cumulative value of afract >= min-total
@@ -104,7 +104,10 @@ def main(arguments):
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('infile', help="Input file", type=argparse.FileType('r'))
-    parser.add_argument('-o', '--outfile', help="Output file",
+    parser.add_argument('-f', '--full-lineages', help="output with one row per rank",
+                        type=argparse.FileType('w'))
+    parser.add_argument('-c', '--classifications',
+                        help="most specific classification for each sequence",
                         default=sys.stdout, type=argparse.FileType('w'))
     parser.add_argument('--min-afract', type=float, default=0.05,
                         help='minimum value for afract for each lineage [%(default)s]')
@@ -116,9 +119,16 @@ def main(arguments):
 
     queries = get_queries(args.infile)
 
-    writer = csv.DictWriter(
-        args.outfile, fieldnames=['name', 'want_rank', 'rank', 'rank_order', 'tax_id', 'tax_name', 'likelihood'])
-    writer.writeheader()
+    if args.full_lineages:
+        full_out = csv.DictWriter(
+            args.full_lineages,
+            fieldnames=['name', 'want_rank', 'rank', 'rank_order', 'tax_id', 'tax_name', 'likelihood'])
+        full_out.writeheader()
+
+    classif = csv.DictWriter(
+        args.classifications, fieldnames=['name', 'rank', 'tax_name', 'likelihood'],
+        extrasaction='ignore')
+    classif.writeheader()
 
     for name, lines in queries:
         lineages = filter_lineages(lines, min_afract=args.min_afract, min_total=args.min_total)
@@ -132,8 +142,10 @@ def main(arguments):
                 tax_name=tax_name,
                 likelihood=likelihood,
             )
-            writer.writerow(row)
-
+            if args.full_lineages:
+                full_out.writerow(row)
+        # the last row of each group contains the most specific classification
+        classif.writerow(row)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

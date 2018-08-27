@@ -81,6 +81,17 @@ labelled_tree, per_pquery_assign, profile = env.Command(
             '--jplace-path ${SOURCES[0]} --taxon-file ${SOURCES[1]}')
 )
 
+# output compatible with yapp pipeline
+classifications = env.Command(
+    target='$out/classifications.csv',
+    source=per_pquery_assign,
+    action='bin/get_classifications.py $SOURCE -c $TARGET'
+)
+
+# comparison with known labels
+# sed -i 's/tax_name/classification/' classifications.csv
+# xsv join seqname seq_info.csv name classifications.csv | xsv select seqname,tax_name,classification,likelihood | xsv sort -s tax_name
+
 epa_classification = env.Command(
     target='$out/epa_classification.csv',
     source=per_pquery_assign,
