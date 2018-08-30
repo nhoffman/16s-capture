@@ -1,6 +1,6 @@
 import os
 import json
-from os.path import join
+from os.path import join, basename
 
 from SCons.Script import Command
 
@@ -14,8 +14,8 @@ bei_data = '/mnt/disk15/molmicro/working/ngh2/2018-08-08-bei-refset'
 refpkg = join(bei_data, 'mkrefpkg/output/bei-hm27/bei-hm27-1.0.refpkg')
 
 capture_data = '/molmicro/working/sara/capture_pipeline_output'
-datadir = join(capture_data, '180522_run483MC_output/483-29')
-infile = join(datadir, '483-29_processed.fasta')
+with open('data/infiles.txt') as f:
+    infiles = f.read().split()
 
 # known classifications
 seq_info = '$input/data/seq_info.csv'
@@ -57,58 +57,8 @@ ref_info = refpkg_files['seq_info']
 ref_taxonomy = refpkg_files['taxonomy']
 profile = refpkg_files['profile']
 
-# downsample
-downsampled = env.Command(
-    target='$out/inseqs.fasta',
-    source=infile,
-    action='seqmagick convert --head 100 $SOURCE $TARGET'
-)
 
-# remove non-16s reads
-seqs_16s, seqs_not16s, cmsearch_scores = env.Command(
-    target=['$out/seqs-16s.fasta',
-            '$out/seqs-not16s.fasta',
-            '$out/cmsearch_scores.txt'],
-    source=[downsampled, 'data/RRNA_16S_BACTERIA.calibrated.cm'],
-    action=('$deenurp_img '
-            'bin/cmfilter.py $SOURCES '
-            '--outfile ${TARGETS[0]} '
-            '--discarded ${TARGETS[1]} '
-            '--scores ${TARGETS[2]} '
-            '--min-evalue 0.01 '
-            '--cpu $nproc '
-            '--reverse-complement ')
-)
-Depends(seqs_16s, 'bin/cmfilter.py')
-
-# align input seqs with cmalign
-query_sto, cmalign_scores = env.Command(
-    target=['$out/query.sto', '$out/cmalign.scores'],
-    source=[seqs_16s, profile],
-    # ncores=args.nproc,
-    # timelimit=30,
-    # slurm_args = '--mem=130000',
-    # slurm_queue=large_queue,
-    action=(
-        '$deenurp_img '
-        'cmalign '
-        '--cpu $nproc '
-        '--mxsize 8196 '
-        '--noprob '
-        '--dnaout '
-        '-o ${TARGETS[0]} '  # alignment in stockholm format
-        '--sfile ${TARGETS[1]} '  # scores
-        '${SOURCES[1]} '  # alignment profile
-        '${SOURCES[0]} '  # input fasta file
-        '| grep -E "^#"'  # limit stdout to commented lines
-    ))
-
-refalign, qalign = env.Command(
-    target=['$out/refalign.fasta', '$out/qalign.fasta'],
-    source=[ref_sto, query_sto],
-    action=('$deenurp_img bin/merge.py $SOURCES $TARGETS')
-)
-Depends(refalign, 'bin/merge.py')
+## begin analysis
 
 taxon_file = env.Command(
     target='$out/taxonomy.txt',
@@ -116,64 +66,109 @@ taxon_file = env.Command(
     action='$taxit lineage_table $SOURCES --taxonomy-table $TARGET'
 )
 
-epa_placements, epa_log = env.Command(
-    target=['$out/epa_result.jplace', '$out/epa_info.log'],
-    source=[refalign, tree, qalign, tree_stats],
-    action=('$epa '
-            '--ref-msa ${SOURCES[0]} '
-            '--tree ${SOURCES[1]} '
-            '--query ${SOURCES[2]} '
-            '--model `python bin/get_model_descriptor.py ${SOURCES[3]}` '
-            '--outdir $out')
-)
+krona_data = []
+for infile in infiles:
+    label = basename(infile).replace('_processed.fasta', '')
+    e = env.Clone(
+        label=label,
+        out='$out/$label',
+    )
 
-# names of gappa targets appear to be hard-coded
-labelled_tree, per_pquery_assign, profile, krona_profile = env.Command(
-    target=['$out/labelled_tree', '$out/per_pquery_assign',
-            '$out/profile.csv', '$out/krona.profile'],
-    source=[epa_placements, taxon_file],
-    action=('$gappa analyze assign '
-            '--krona '
-            '--out-dir $out '
-            '--jplace-path ${SOURCES[0]} '
-            '--taxon-file ${SOURCES[1]}')
-)
+    # downsample
+    # downsampled = e.Command(
+    #     target='$out/inseqs.fasta',
+    #     source=infile,
+    #     action='seqmagick convert --head 1000 $SOURCE $TARGET'
+    # )
 
-krona_raw = env.Command(
-    target='$out/krona-raw.html',
-    source=krona_profile,
-    action='$krona $SOURCE -o $TARGET'
-)
+    # remove non-16s reads
+    seqs_16s, seqs_not16s, cmsearch_scores = e.Command(
+        target=['$out/seqs-16s.fasta',
+                '$out/seqs-not16s.fasta',
+                '$out/cmsearch_scores.txt'],
+        source=[infile, 'data/RRNA_16S_BACTERIA.calibrated.cm'],
+        action=('$deenurp_img '
+                'bin/cmfilter.py $SOURCES '
+                '--outfile ${TARGETS[0]} '
+                '--discarded ${TARGETS[1]} '
+                '--scores ${TARGETS[2]} '
+                '--min-evalue 0.01 '
+                '--cpu $nproc '
+                '--reverse-complement ')
+    )
+    Depends(seqs_16s, 'bin/cmfilter.py')
 
-# filtered outputs
-classifications, lineages, krona_prof_filtered = env.Command(
-    target=['$out/classifications.csv', '$out/lineages.csv', '$out/krona_profile_filtered.tsv'],
-    source=per_pquery_assign,
-    action=('bin/get_classifications.py $SOURCE '
-            '--classifications ${TARGETS[0]} '
-            '--lineages ${TARGETS[1]} '
-            '--krona ${TARGETS[2]} ')
-)
-Depends(classifications, 'bin/get_classifications.py')
+    # align input seqs with cmalign
+    query_sto, cmalign_scores = e.Command(
+        target=['$out/query.sto', '$out/cmalign.scores'],
+        source=[seqs_16s, profile],
+        # ncores=args.nproc,
+        # timelimit=30,
+        # slurm_args = '--mem=130000',
+        # slurm_queue=large_queue,
+        action=(
+            '$deenurp_img '
+            'cmalign '
+            '--cpu $nproc '
+            '--mxsize 8196 '
+            '--noprob '
+            '--dnaout '
+            '-o ${TARGETS[0]} '  # alignment in stockholm format
+            '--sfile ${TARGETS[1]} '  # scores
+            '${SOURCES[1]} '  # alignment profile
+            '${SOURCES[0]} '  # input fasta file
+            '| grep -E "^#"'  # limit stdout to commented lines
+        ))
+
+    refalign, qalign = e.Command(
+        target=['$out/refalign.fasta', '$out/qalign.fasta'],
+        source=[ref_sto, query_sto],
+        action=('$deenurp_img bin/merge.py $SOURCES $TARGETS')
+    )
+    Depends(refalign, 'bin/merge.py')
+
+    epa_placements, epa_log = e.Command(
+        target=['$out/epa_result.jplace', '$out/epa_info.log'],
+        source=[refalign, tree, qalign, tree_stats],
+        action=('$epa '
+                '--ref-msa ${SOURCES[0]} '
+                '--tree ${SOURCES[1]} '
+                '--query ${SOURCES[2]} '
+                '--model `python bin/get_model_descriptor.py ${SOURCES[3]}` '
+                '--outdir $out')
+    )
+
+    # names of gappa targets appear to be hard-coded
+    labelled_tree, per_pquery_assign, gappa_profile, krona_raw = e.Command(
+        target=['$out/labelled_tree', '$out/per_pquery_assign',
+                '$out/profile.csv', '$out/krona-${label}-raw'],
+        source=[epa_placements, taxon_file],
+        action=[('$gappa analyze assign '
+                '--krona '
+                '--out-dir $out '
+                '--jplace-path ${SOURCES[0]} '
+                 '--taxon-file ${SOURCES[1]}'),
+                'mv $out/krona.profile ${TARGETS[3]}']
+    )
+    krona_data.append(krona_raw)
+
+    # filtered outputs
+    classifications, lineages, krona_filtered = e.Command(
+        target=['$out/classifications.csv', '$out/lineages.csv', '$out/krona-${label}-filtered'],
+        source=per_pquery_assign,
+        action=('bin/get_classifications.py $SOURCE '
+                '--classifications ${TARGETS[0]} '
+                '--lineages ${TARGETS[1]} '
+                '--krona ${TARGETS[2]} '
+                '--min-afract 0.5 '
+                '--min-total 0.75 '
+        )
+    )
+    Depends(classifications, 'bin/get_classifications.py')
+    krona_data.append(krona_filtered)
 
 krona_filtered = env.Command(
-    target='$out/krona-filtered.html',
-    source=krona_prof_filtered,
-    action='$krona $SOURCE -o $TARGET'
+    target='$out/krona.html',
+    source=krona_data,
+    action='$krona -o $TARGET $SOURCES'
 )
-
-# # comparison with known labels
-# # sed -i 's/tax_name/classification/' classifications.csv
-# # xsv join seqname seq_info.csv name classifications.csv | xsv select seqname,tax_name,classification,likelihood | xsv sort -s tax_name
-
-# epa_classification = env.Command(
-#     target='$out/epa_classification.csv',
-#     source=per_pquery_assign,
-#     action='python bin/reformat_gappa_result.py $SOURCE > $TARGET'
-# )
-
-# comparison_table = env.Command(
-#     target='$out/comparison_table.csv',
-#     source=[epa_classification, seq_info],
-#     action='python bin/compare_results.py ${SOURCES[0]} ${SOURCES[1]} > $TARGET'
-# )

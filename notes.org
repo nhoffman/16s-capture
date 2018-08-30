@@ -25,3 +25,27 @@ ls /molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/483-29/
 #+RESULTS:
 : /molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/483-29/483-29_processed.fasta
 
+#+BEGIN_SRC sh :results output
+find /molmicro/working/sara/capture_pipeline_output/180117run411human/ -name '*_processed.fasta' > data/infiles.txt
+find /molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/ -name '*_processed.fasta' >> data/infiles.txt
+cat data/infiles.txt
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+/molmicro/working/sara/capture_pipeline_output/180117run411human/411_21b30/411_21b30_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180117run411human/411_22b30/411_22b30_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180117run411human/411_23b30/411_23b30_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180117run411human/411_24b30/411_24b30_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180117run411human/411_32b30/411_32b30_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180117run411human/411_33b30/411_33b30_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180117run411human/411_34b30/411_34b30_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180117run411human/411_35b30/411_35b30_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180117run411human/411_36b30/411_36b30_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/483-25/483-25_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/483-26/483-26_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/483-27/483-27_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/483-28/483-28_processed.fasta
+/molmicro/working/sara/capture_pipeline_output/180522_run483MC_output/483-29/483-29_processed.fasta
+#+end_example
+
