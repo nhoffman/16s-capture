@@ -1,3 +1,4 @@
 scons
 seqmagick
 fastalite
+bioscons

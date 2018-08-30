@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Reformat of output/per_pquery_assign (output of 'gappa assign')
 
@@ -165,7 +165,7 @@ def main(arguments):
             lineages.writerow(dict(most_specific, **dict(ranks)))
 
     if args.krona:
-        for lineage, count in counts.iteritems():
+        for lineage, count in counts.most_common():
             krona.writerow(dict(count=count, **dict(lineage)))
 
 

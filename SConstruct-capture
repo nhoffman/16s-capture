@@ -1,11 +1,10 @@
 import os
 import json
 from os.path import join, basename
+import configparser
 
 from SCons.Script import Command
-
-vars = Variables()
-vars.Add('out', '', 'output-capture')
+from bioscons.fileutils import rename
 
 ##### inputs #######
 # TODO: move to a config file
@@ -13,18 +12,35 @@ vars.Add('out', '', 'output-capture')
 bei_data = '/mnt/disk15/molmicro/working/ngh2/2018-08-08-bei-refset'
 refpkg = join(bei_data, 'mkrefpkg/output/bei-hm27/bei-hm27-1.0.refpkg')
 
-capture_data = '/molmicro/working/sara/capture_pipeline_output'
-with open('data/infiles.txt') as f:
-    infiles = f.read().split()
+# data_conf = 'data/data-small.conf'
+data_conf = 'data/data.conf'
+fastq_data = configparser.ConfigParser(allow_no_value=True)
+fastq_data.read(data_conf)
+sections = list(fastq_data.items())
+sections.pop(0)  # first section is DEFAULT
+fastq_files = [(name, s['r1'], s['r2']) for name, s in sections]
 
 # known classifications
 seq_info = '$input/data/seq_info.csv'
 
+capture_data = '/molmicro/working/sara'
 binds = ','.join([bei_data, capture_data])
 
 ##### end inputs ###
 
+vars = Variables()
+vars.Add('out', '', 'output-capture')
+
+# Define some PATH elements explicitly.
+venv = os.environ['VIRTUAL_ENV']
+PATH=':'.join([
+    'bin',
+    join(venv, 'bin'),
+    '/app/bin',  # provides R
+    '/usr/local/bin', '/usr/bin', '/bin'])
+
 env = Environment(
+    ENV=dict(os.environ, PATH=PATH),
     variables=vars,
     SHELL='bash',
     cwd=os.getcwd(),
@@ -36,6 +52,10 @@ env = Environment(
            '--pwd $cwd -B $cwd,$binds '
            '/molmicro/common/singularity/taxtastic-0.8.5-singularity2.4.img '
            'taxit'),
+    fastq_mcf=('singularity exec '
+               '--pwd $cwd -B $cwd,$binds ea-utils.simg fastq-mcf'),
+    super_deduper=('singularity exec '
+                   '--pwd $cwd -B $cwd htstream.simg hts_SuperDeduper'),
     deenurp_img=('singularity exec '
                  '--pwd $cwd -B $cwd,$binds '
                  '/molmicro/common/singularity/deenurp-v0.2.4-singularity2.4.img'),
@@ -67,26 +87,91 @@ taxon_file = env.Command(
 )
 
 krona_data = []
-for infile in infiles:
-    label = basename(infile).replace('_processed.fasta', '')
+for label, r1, r2 in fastq_files:
     e = env.Clone(
         label=label,
         out='$out/$label',
     )
 
     # downsample
-    # downsampled = e.Command(
-    #     target='$out/inseqs.fasta',
-    #     source=infile,
-    #     action='seqmagick convert --head 1000 $SOURCE $TARGET'
-    # )
+    r1 = e.Command(
+        target='$out/r1_downsampled.fastq',
+        source=r1,
+        action='seqmagick convert --head 1000 $SOURCE $TARGET'
+    )
+
+    r2 = e.Command(
+        target='$out/r2_downsampled.fastq',
+        source=r2,
+        action='seqmagick convert --head 1000 $SOURCE $TARGET'
+    )
+
+    # trim and quality filter
+    r1_cleaned, r2_cleaned, fqmcf_log = e.Command(
+        target=['$out/cleaned_R1.fastq.gz', '$out/cleaned_R2.fastq.gz', '$out/fastq_mcf.log'],
+        source=['data/Illumina_adaptors_v2.fa', r1, r2],
+        action=('$fastq_mcf -o ${TARGETS[0]} -o ${TARGETS[1]} '
+                '-D 0 -k 0 -q 5 -l 25 $SOURCES '
+                '1> ${TARGETS[2]}')
+    )
+
+    # remove PCR duplicates
+    r1_deduped, r2_deduped, dedup_log = e.Command(
+        target=['$out/deduped_R1.fastq',
+                '$out/deduped_R2.fastq',
+                '$out/super_deduper.log'],
+        source=[r1_cleaned, r2_cleaned],
+        action=('$super_deduper --force '
+                '--prefix $out/deduped '
+                '--read1-input ${SOURCES[0]} '
+                '--read2-input ${SOURCES[1]} '
+                '--stats-file ${TARGETS[2]} ')
+    )
+
+    # assemble paired reads
+    assembled_fq, discarded, r1_unassembled_fq, r2_unassembled_fq = e.Command(
+        target=['$out/pear.assembled.fastq',
+                '$out/pear.discarded.fastq',
+                '$out/pear.unassembled.forward.fastq',
+                '$out/pear.unassembled.reverse.fastq'],
+        source=[r1_deduped, r2_deduped],
+        action=('pear -f ${SOURCES[0]} -r ${SOURCES[1]} '
+                '--min-trim-length 25 '
+                '--threads 4 '
+                '--output $out/pear ')
+        )
+
+    # convert to fasta
+    assembled = e.Command(
+        target=rename(assembled_fq, ext='.fasta'),
+        source=assembled_fq,
+        action='seqmagick convert $SOURCE $TARGET')
+
+    r1_unassembled = e.Command(
+        target=rename(r1_unassembled_fq, ext='.fasta'),
+        source=r1_unassembled_fq,
+        action='seqmagick convert --name-suffix _r1 $SOURCE $TARGET')
+
+    r2_unassembled = e.Command(
+        target=rename(r2_unassembled_fq, ext='.fasta'),
+        source=r2_unassembled_fq,
+        action='seqmagick convert --name-suffix _r2 $SOURCE $TARGET')
+
+    # concatenate into a single file
+    unfiltered = e.Command(
+        target='$out/unfiltered.fasta',
+        source=[
+            assembled,
+            r1_unassembled, r2_unassembled],
+        action='cat $SOURCES > $TARGET'
+    )
 
     # remove non-16s reads
     seqs_16s, seqs_not16s, cmsearch_scores = e.Command(
         target=['$out/seqs-16s.fasta',
                 '$out/seqs-not16s.fasta',
                 '$out/cmsearch_scores.txt'],
-        source=[infile, 'data/RRNA_16S_BACTERIA.calibrated.cm'],
+        source=[unfiltered, 'data/RRNA_16S_BACTERIA.calibrated.cm'],
         action=('$deenurp_img '
                 'bin/cmfilter.py $SOURCES '
                 '--outfile ${TARGETS[0]} '
@@ -120,16 +205,29 @@ for infile in infiles:
             '| grep -E "^#"'  # limit stdout to commented lines
         ))
 
-    refalign, qalign = e.Command(
-        target=['$out/refalign.fasta', '$out/qalign.fasta'],
+    # place ref and query alignments into the same alignemnt register
+    refalign, qalign_unmerged = e.Command(
+        target=['$out/refalign.fasta', '$out/qalign_unmerged.fasta'],
         source=[ref_sto, query_sto],
         action=('$deenurp_img bin/merge.py $SOURCES $TARGETS')
     )
     Depends(refalign, 'bin/merge.py')
 
+    # calculate a consensus for unassembled read pairs
+    qalign = e.Command(
+        target='$out/qalign.fasta',
+        source=qalign_unmerged,
+        action='bin/get_consensus.py $SOURCE -o $TARGET'
+    )
+    Depends(qalign, 'bin/get_consensus.py')
+
+    # place reads onto the reference tree
     epa_placements, epa_log = e.Command(
         target=['$out/epa_result.jplace', '$out/epa_info.log'],
-        source=[refalign, tree, qalign, tree_stats],
+        source=[refalign, tree,
+                # qalign_unmerged,
+                qalign,
+                tree_stats],
         action=('$epa '
                 '--ref-msa ${SOURCES[0]} '
                 '--tree ${SOURCES[1]} '
@@ -138,6 +236,7 @@ for infile in infiles:
                 '--outdir $out')
     )
 
+    # classify
     # names of gappa targets appear to be hard-coded
     labelled_tree, per_pquery_assign, gappa_profile, krona_raw = e.Command(
         target=['$out/labelled_tree', '$out/per_pquery_assign',
@@ -152,7 +251,7 @@ for infile in infiles:
     )
     krona_data.append(krona_raw)
 
-    # filtered outputs
+    # filter by likelihood and reformat
     classifications, lineages, krona_filtered = e.Command(
         target=['$out/classifications.csv', '$out/lineages.csv', '$out/krona-${label}-filtered'],
         source=per_pquery_assign,
@@ -167,7 +266,14 @@ for infile in infiles:
     Depends(classifications, 'bin/get_classifications.py')
     krona_data.append(krona_filtered)
 
-krona_filtered = env.Command(
+    krona = e.Command(
+        target='$out/krona.html',
+        source=[krona_raw, krona_filtered],
+        action='$krona -o $TARGET $SOURCES'
+    )
+
+# all krona plots
+krona_all = env.Command(
     target='$out/krona.html',
     source=krona_data,
     action='$krona -o $TARGET $SOURCES'
