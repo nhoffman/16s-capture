@@ -27,6 +27,7 @@ def main(arguments):
             pth = sec.get(key)
             assert pth is not None
             assert os.path.exists(pth)
+            print(pth)
 
 
 if __name__ == '__main__':

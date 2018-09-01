@@ -10,7 +10,7 @@ from bioscons.fileutils import rename
 # TODO: move to a config file
 
 bei_data = '/mnt/disk15/molmicro/working/ngh2/2018-08-08-bei-refset'
-refpkg = join(bei_data, 'mkrefpkg/output/bei-hm27/bei-hm27-1.0.refpkg')
+refpkg = join(bei_data, 'mkrefpkg/output/bei-hm27-plus/bei-hm27-plus-1.0.refpkg')
 
 # data_conf = 'data/data-small.conf'
 data_conf = 'data/data.conf'
@@ -28,6 +28,7 @@ binds = ','.join([bei_data, capture_data])
 
 ##### end inputs ###
 
+Decider('MD5-timestamp')
 vars = Variables()
 vars.Add('out', '', 'output-capture')
 
@@ -87,23 +88,27 @@ taxon_file = env.Command(
 )
 
 krona_data = []
+for_counts = []
 for label, r1, r2 in fastq_files:
     e = env.Clone(
         label=label,
         out='$out/$label',
+        max_reads=100000,
     )
+    for_counts.append(r1)
 
     # downsample
     r1 = e.Command(
         target='$out/r1_downsampled.fastq',
         source=r1,
-        action='seqmagick convert --head 1000 $SOURCE $TARGET'
+        action='seqmagick convert --head ${max_reads} $SOURCE $TARGET'
     )
+    for_counts.append(r1)
 
     r2 = e.Command(
         target='$out/r2_downsampled.fastq',
         source=r2,
-        action='seqmagick convert --head 1000 $SOURCE $TARGET'
+        action='seqmagick convert --head ${max_reads} $SOURCE $TARGET'
     )
 
     # trim and quality filter
@@ -114,6 +119,7 @@ for label, r1, r2 in fastq_files:
                 '-D 0 -k 0 -q 5 -l 25 $SOURCES '
                 '1> ${TARGETS[2]}')
     )
+    for_counts.append(r1_cleaned)
 
     # remove PCR duplicates
     r1_deduped, r2_deduped, dedup_log = e.Command(
@@ -127,6 +133,7 @@ for label, r1, r2 in fastq_files:
                 '--read2-input ${SOURCES[1]} '
                 '--stats-file ${TARGETS[2]} ')
     )
+    for_counts.append(r1_deduped)
 
     # assemble paired reads
     assembled_fq, discarded, r1_unassembled_fq, r2_unassembled_fq = e.Command(
@@ -140,6 +147,7 @@ for label, r1, r2 in fastq_files:
                 '--threads 4 '
                 '--output $out/pear ')
         )
+    for_counts.extend([assembled_fq, discarded, r1_unassembled_fq])
 
     # convert to fasta
     assembled = e.Command(
@@ -182,6 +190,7 @@ for label, r1, r2 in fastq_files:
                 '--reverse-complement ')
     )
     Depends(seqs_16s, 'bin/cmfilter.py')
+    for_counts.extend([seqs_16s, seqs_not16s])
 
     # align input seqs with cmalign
     query_sto, cmalign_scores = e.Command(
@@ -272,9 +281,23 @@ for label, r1, r2 in fastq_files:
         action='$krona -o $TARGET $SOURCES'
     )
 
-# all krona plots
-krona_all = env.Command(
-    target='$out/krona.html',
-    source=krona_data,
-    action='$krona -o $TARGET $SOURCES'
+# count reads in all fastq files
+read_counts = env.Command(
+    target='$out/read_counts.csv',
+    source=Flatten(for_counts),
+    action='bin/read_depth.py -j $nproc $SOURCES -o $TARGET'
 )
+
+read_stats = env.Command(
+    target='$out/read_stats.csv',
+    source=read_counts,
+    action='bin/read_stats.py $SOURCE -o $TARGET'
+)
+
+if krona_data:
+    # all krona plots
+    krona_all = env.Command(
+        target='$out/krona.html',
+        source=krona_data,
+        action='$krona -o $TARGET $SOURCES'
+    )
