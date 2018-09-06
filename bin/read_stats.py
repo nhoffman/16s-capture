@@ -44,7 +44,7 @@ def main(arguments):
     fieldnames = """
         specimen
         raw
-        downsampled
+        barcodecop
         cleaned
         deduped
         assembled

@@ -2,35 +2,42 @@ import os
 import json
 from os.path import join, basename
 import configparser
+from collections import namedtuple
 
 from SCons.Script import Command
 from bioscons.fileutils import rename
 
+
+def get_refpkg(refpkg):
+    """Return a namedtuple with attributes corresponding to files in the
+    refpkg
+
+    """
+
+    with open(join(refpkg, 'CONTENTS.json')) as jfile:
+        files = json.load(jfile)['files']
+        Refpkg = namedtuple('Refpkg', sorted(files.keys()))
+        return Refpkg(**{k: join(refpkg, v) for k, v in files.items()})
+
+
 ##### inputs #######
-# TODO: move to a config file
+# conf_file = 'data/data.conf'
+conf_file = 'data/data-small.conf'
+conf = configparser.ConfigParser(allow_no_value=True)
+conf.read(conf_file)
 
-bei_data = '/mnt/disk15/molmicro/working/ngh2/2018-08-08-bei-refset'
-refpkg = join(bei_data, 'mkrefpkg/output/bei-hm27-plus/bei-hm27-plus-1.0.refpkg')
-
-# data_conf = 'data/data-small.conf'
-data_conf = 'data/data.conf'
-fastq_data = configparser.ConfigParser(allow_no_value=True)
-fastq_data.read(data_conf)
-sections = list(fastq_data.items())
+sections = list(conf.items())
 sections.pop(0)  # first section is DEFAULT
-fastq_files = [(name, s['r1'], s['r2']) for name, s in sections]
+inputs = [(name, s['r1'], s['r2'], s['refpkg']) for name, s in sections]
 
-# known classifications
-seq_info = '$input/data/seq_info.csv'
-
-capture_data = '/molmicro/working/sara'
-binds = ','.join([bei_data, capture_data])
+# global binds
+binds = ','.join(['/molmicro/miseq_data'])
 
 ##### end inputs ###
 
 Decider('MD5-timestamp')
 vars = Variables()
-vars.Add('out', '', 'output-capture')
+vars.Add('out', '', conf['DEFAULT']['outdir'])
 
 # Define some PATH elements explicitly.
 venv = os.environ['VIRTUAL_ENV']
@@ -63,58 +70,55 @@ env = Environment(
     nproc=15,
 )
 
-def get_refpkg_contents(refpkg):
-    with open(join(refpkg, 'CONTENTS.json')) as jfile:
-        files = json.load(jfile)['files']
-        return {k: join(refpkg, v) for k, v in files.items()}
-
-
-refpkg_files = get_refpkg_contents(refpkg)
-ref_msa = refpkg_files['aln_fasta']
-ref_sto = refpkg_files['aln_sto']
-tree = refpkg_files['tree']
-tree_stats = refpkg_files['tree_stats']
-ref_info = refpkg_files['seq_info']
-ref_taxonomy = refpkg_files['taxonomy']
-profile = refpkg_files['profile']
-
-
 ## begin analysis
-
-taxon_file = env.Command(
-    target='$out/taxonomy.txt',
-    source=[ref_taxonomy, ref_info],
-    action='$taxit lineage_table $SOURCES --taxonomy-table $TARGET'
-)
 
 krona_data = []
 for_counts = []
-for label, r1, r2 in fastq_files:
+for label, r1, r2, refpkg_pth in inputs:
+    refpkg = get_refpkg(refpkg_pth)
+
     e = env.Clone(
         label=label,
         out='$out/$label',
-        max_reads=100000,
+        binds='$binds,' + refpkg_pth,
     )
+
+    # TODO: do this only once for each refpkg
+    taxon_file = e.Command(
+        target='$out/ref_taxonomy.txt',
+        source=[refpkg.taxonomy, refpkg.seq_info],
+        action='$taxit lineage_table $SOURCES --taxonomy-table $TARGET'
+    )
+
     for_counts.append(r1)
 
-    # downsample
-    r1 = e.Command(
-        target='$out/r1_downsampled.fastq',
-        source=r1,
-        action='seqmagick convert --head ${max_reads} $SOURCE $TARGET'
-    )
-    for_counts.append(r1)
+    # barcode filter
+    max_reads = None
+    bcop_action = ('barcodecop ${SOURCES[0]} -f ${SOURCES[1]} '
+                   '--outfile $TARGET '
+                   '--match-filter --qual-filter ')
+    if max_reads:
+        bcop_action += ' --head {}'.format(max_reads)
 
-    r2 = e.Command(
-        target='$out/r2_downsampled.fastq',
-        source=r2,
-        action='seqmagick convert --head ${max_reads} $SOURCE $TARGET'
+    index_read = r1.replace('_R1_', '_I1_')
+    r1_bcop = e.Command(
+        target='$out/r1_barcodecop.fastq',
+        source=[index_read, r1],
+        action=bcop_action
+    )
+    for_counts.append(r1_bcop)
+
+    r2_bcop = e.Command(
+        target='$out/r2_barcodecop.fastq',
+        source=[index_read, r2],
+        action=bcop_action
     )
 
     # trim and quality filter
+    # TODO: implement downsample using -O?
     r1_cleaned, r2_cleaned, fqmcf_log = e.Command(
         target=['$out/cleaned_R1.fastq.gz', '$out/cleaned_R2.fastq.gz', '$out/fastq_mcf.log'],
-        source=['data/Illumina_adaptors_v2.fa', r1, r2],
+        source=['data/Illumina_adaptors_v2.fa', r1_bcop, r2_bcop],
         action=('$fastq_mcf -o ${TARGETS[0]} -o ${TARGETS[1]} '
                 '-D 0 -k 0 -q 5 -l 25 $SOURCES '
                 '1> ${TARGETS[2]}')
@@ -195,7 +199,7 @@ for label, r1, r2 in fastq_files:
     # align input seqs with cmalign
     query_sto, cmalign_scores = e.Command(
         target=['$out/query.sto', '$out/cmalign.scores'],
-        source=[seqs_16s, profile],
+        source=[seqs_16s, refpkg.profile],
         # ncores=args.nproc,
         # timelimit=30,
         # slurm_args = '--mem=130000',
@@ -217,7 +221,7 @@ for label, r1, r2 in fastq_files:
     # place ref and query alignments into the same alignemnt register
     refalign, qalign_unmerged = e.Command(
         target=['$out/refalign.fasta', '$out/qalign_unmerged.fasta'],
-        source=[ref_sto, query_sto],
+        source=[refpkg.aln_sto, query_sto],
         action=('$deenurp_img bin/merge.py $SOURCES $TARGETS')
     )
     Depends(refalign, 'bin/merge.py')
@@ -233,10 +237,10 @@ for label, r1, r2 in fastq_files:
     # place reads onto the reference tree
     epa_placements, epa_log = e.Command(
         target=['$out/epa_result.jplace', '$out/epa_info.log'],
-        source=[refalign, tree,
+        source=[refalign, refpkg.tree,
                 # qalign_unmerged,
                 qalign,
-                tree_stats],
+                refpkg.tree_stats],
         action=('$epa '
                 '--ref-msa ${SOURCES[0]} '
                 '--tree ${SOURCES[1]} '
@@ -294,8 +298,8 @@ read_stats = env.Command(
     action='bin/read_stats.py $SOURCE -o $TARGET'
 )
 
+# all krona plots
 if krona_data:
-    # all krona plots
     krona_all = env.Command(
         target='$out/krona.html',
         source=krona_data,
