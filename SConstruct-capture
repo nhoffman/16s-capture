@@ -21,8 +21,8 @@ def get_refpkg(refpkg):
 
 
 ##### inputs #######
-# conf_file = 'data/data.conf'
-conf_file = 'data/data-small.conf'
+conf_file = 'data/data.conf'
+# conf_file = 'data/data-small.conf'
 conf = configparser.ConfigParser(allow_no_value=True)
 conf.read(conf_file)
 
@@ -96,7 +96,9 @@ for label, r1, r2, refpkg_pth in inputs:
     max_reads = None
     bcop_action = ('barcodecop ${SOURCES[0]} -f ${SOURCES[1]} '
                    '--outfile $TARGET '
-                   '--match-filter --qual-filter ')
+                   '--match-filter '
+                   '--qual-filter '
+                   '--min-qual 30 ')
     if max_reads:
         bcop_action += ' --head {}'.format(max_reads)
 
@@ -148,7 +150,7 @@ for label, r1, r2, refpkg_pth in inputs:
         source=[r1_deduped, r2_deduped],
         action=('pear -f ${SOURCES[0]} -r ${SOURCES[1]} '
                 '--min-trim-length 25 '
-                '--threads 4 '
+                '--threads $nproc '
                 '--output $out/pear ')
         )
     for_counts.extend([assembled_fq, discarded, r1_unassembled_fq])
