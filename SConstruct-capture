@@ -104,14 +104,14 @@ for label, r1, r2, refpkg_pth in inputs:
 
     index_read = r1.replace('_R1_', '_I1_')
     r1_bcop = e.Command(
-        target='$out/r1_barcodecop.fastq',
+        target='$out/r1_barcodecop.fastq.gz',
         source=[index_read, r1],
         action=bcop_action
     )
     for_counts.append(r1_bcop)
 
     r2_bcop = e.Command(
-        target='$out/r2_barcodecop.fastq',
+        target='$out/r2_barcodecop.fastq.gz',
         source=[index_read, r2],
         action=bcop_action
     )
@@ -227,6 +227,7 @@ for label, r1, r2, refpkg_pth in inputs:
         action=('$deenurp_img bin/merge.py $SOURCES $TARGETS')
     )
     Depends(refalign, 'bin/merge.py')
+    for_counts.append(qalign_unmerged)
 
     # calculate a consensus for unassembled read pairs
     qalign = e.Command(
@@ -235,6 +236,7 @@ for label, r1, r2, refpkg_pth in inputs:
         action='bin/get_consensus.py $SOURCE -o $TARGET'
     )
     Depends(qalign, 'bin/get_consensus.py')
+    for_counts.append(qalign)
 
     # place reads onto the reference tree
     epa_placements, epa_log = e.Command(

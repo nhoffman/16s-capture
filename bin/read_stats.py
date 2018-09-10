@@ -51,7 +51,9 @@ def main(arguments):
         unassembled
         discarded
         seqs-16s
-        seqs-not16s""".split()
+        seqs-not16s
+        qalign_unmerged
+        qalign""".split()
 
     writer = csv.DictWriter(args.outfile, fieldnames=fieldnames)
     writer.writeheader()
