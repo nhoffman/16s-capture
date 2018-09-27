@@ -2,20 +2,25 @@
  EPA evaluation
 ================
 
-setup::
+setup
+=====
+
+create a virtualenv::
 
   python3 -m venv py3-env
   source py3-env/bin/activate
   pip install -U pip wheel
   pip install scons
 
-Build gappa Singularity image::
+Extract PEAR binary: PEAR 0.9.11 binaries and sources were downloaded
+from http://www.exelixis-lab.org/web/software/pear - this required
+filling out a registration form that worked only on Chrome. These are
+stored in /src. To copy the binary to the virtualenv::
 
-  sudo singularity build gappa.simg Singularity-gappa
-  sudo singularity build ea-utils.simg singularity/Singularity_ea-utils
-  sudo singularity build htstream.simg singularity/Singularity_htstream
+  tar -xf src/pear-0.9.11-linux-x86_64.tgz --strip-components 2 -C py3-env/bin pear-0.9.11-linux-x86_64/bin/pear
 
-Download PEAR 0.9.11 binaries and sources from
-http://www.exelixis-lab.org/web/software/pear - this required filling
-out a registration form that worked only on Chrome. Placed these
-in /src and copied the binary to /py3-env/bin
+Build the Singularity images::
+
+  mkdir -p singularity_images
+  for fn in singularity/*; do sudo singularity build singularity_images/${fn#singularity/Singularity_}.simg $fn; done
+

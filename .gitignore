@@ -3,3 +3,4 @@
 /output
 *-env
 *.pyc
+singularity_images/
