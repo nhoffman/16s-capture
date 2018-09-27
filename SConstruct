@@ -22,27 +22,28 @@ def get_refpkg(refpkg):
 
 
 ##### inputs #######
-conf_file = 'data/data.conf'
-# conf_file = 'data/data-small.conf'
+conf_file = 'settings.conf'
 conf = configparser.ConfigParser(allow_no_value=True)
 conf.read(conf_file)
 
 krona_labels = conf.get('input', 'krona_labels')
 
-sections = list(conf.items())
-sections.pop(0)  # first section is DEFAULT
-sections.pop(0)  # second section is input
+data_file = 'data.conf'
+data = configparser.ConfigParser(allow_no_value=True)
+data.read(data_file)
 
+sections = list(data.items())
 inputs = [(name, s['r1'], s['r2'], s['refpkg']) for name, s in sections]
 
 # global binds
+# TODO: move to settings
 binds = ','.join(['/molmicro/miseq_data'])
 
 ##### end inputs ###
 
 Decider('MD5-timestamp')
 vars = Variables()
-vars.Add('out', '', conf['DEFAULT']['outdir'])
+vars.Add('out', '', conf['output']['outdir'])
 
 # Define some PATH elements explicitly.
 venv = os.environ['VIRTUAL_ENV']
