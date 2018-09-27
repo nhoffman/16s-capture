@@ -11,6 +11,7 @@ create a virtualenv::
   source py3-env/bin/activate
   pip install -U pip wheel
   pip install scons
+  pip install -r requirements.txt
 
 Extract PEAR binary: PEAR 0.9.11 binaries and sources were downloaded
 from http://www.exelixis-lab.org/web/software/pear - this required
