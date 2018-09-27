@@ -2,7 +2,8 @@ import os
 import json
 from os.path import join, basename
 import configparser
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
+import csv
 
 from SCons.Script import Command
 from bioscons.fileutils import rename
@@ -26,8 +27,12 @@ conf_file = 'data/data.conf'
 conf = configparser.ConfigParser(allow_no_value=True)
 conf.read(conf_file)
 
+krona_labels = conf.get('input', 'krona_labels')
+
 sections = list(conf.items())
 sections.pop(0)  # first section is DEFAULT
+sections.pop(0)  # second section is input
+
 inputs = [(name, s['r1'], s['r2'], s['refpkg']) for name, s in sections]
 
 # global binds
@@ -266,7 +271,7 @@ for label, r1, r2, refpkg_pth in inputs:
                  '--taxon-file ${SOURCES[1]}'),
                 'mv $out/krona.profile ${TARGETS[3]}']
     )
-    krona_data.append(krona_raw)
+    # krona_data.append(krona_raw)
 
     # filter by likelihood and reformat
     classifications, lineages, krona_filtered = e.Command(
@@ -304,8 +309,19 @@ read_stats = env.Command(
 
 # all krona plots
 if krona_data:
+    if krona_labels:
+        with open(krona_labels) as f:
+            labels = OrderedDict(csv.reader(f))
+
+        krona_data_labeled = [(str(f).split('/')[1], f) for f in krona_data]
+        krona_data_labeled.sort(key=lambda x: list(labels.keys()).index(x[0]))
+        krona_action = ('$krona -o $TARGET {}'.format(
+            ' '.join('{},"{}"'.format(f, labels[bc]) for bc, f in krona_data_labeled)))
+    else:
+        krona_action = '$krona -o $TARGET $SOURCES'
+
     krona_all = env.Command(
         target='$out/krona.html',
         source=krona_data,
-        action='$krona -o $TARGET $SOURCES'
+        action=krona_action
     )
