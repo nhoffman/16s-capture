@@ -26,18 +26,16 @@ conf_file = 'settings.conf'
 conf = configparser.ConfigParser(allow_no_value=True)
 conf.read(conf_file)
 
+images = {k + '_simg': v for k, v in conf['singularity'].items()
+          if k not in set(conf['DEFAULT'].keys()) and not k.startswith('_')}
+
 krona_labels = conf.get('input', 'krona_labels')
 
-data_file = 'data.conf'
+data_file = 'data/data.conf'
 data = configparser.ConfigParser(allow_no_value=True)
 data.read(data_file)
 
-sections = list(data.items())
-inputs = [(name, s['r1'], s['r2'], s['refpkg']) for name, s in sections]
-
-# global binds
-# TODO: move to settings
-binds = ','.join(['/molmicro/miseq_data'])
+sections = list(data.items())[1:]  # exclude DEFAULT section
 
 ##### end inputs ###
 
@@ -58,48 +56,46 @@ env = Environment(
     variables=vars,
     SHELL='bash',
     cwd=os.getcwd(),
-    binds=binds,
-    epa=('singularity run --pwd $cwd -B $cwd,$binds epa.simg'),
-    gappa=('singularity run --pwd $cwd -B $cwd,$binds gappa.simg'),
-    krona=('singularity run --pwd $cwd -B $cwd,$binds krona.simg'),
-    taxit=('singularity exec '
-           '--pwd $cwd -B $cwd,$binds '
-           '/molmicro/common/singularity/taxtastic-0.8.5-singularity2.4.img '
-           'taxit'),
+    epa=('singularity run --pwd $cwd -B $cwd,$refpkg $epa_simg'),
+    gappa=('singularity run --pwd $cwd -B $cwd $gappa_simg'),
+    krona=('singularity run --pwd $cwd -B $cwd $krona_simg'),
     fastq_mcf=('singularity exec '
-               '--pwd $cwd -B $cwd,$binds ea-utils.simg fastq-mcf'),
+               '--pwd $cwd -B $cwd $ea_utils_simg fastq-mcf'),
     super_deduper=('singularity exec '
-                   '--pwd $cwd -B $cwd htstream.simg hts_SuperDeduper'),
-    deenurp_img=('singularity exec '
-                 '--pwd $cwd -B $cwd,$binds '
-                 '/molmicro/common/singularity/deenurp-v0.2.4-singularity2.4.img'),
+                   '--pwd $cwd -B $cwd $htstream_simg hts_SuperDeduper'),
+    deenurp_img=('singularity exec --pwd $cwd -B $cwd,$refpkg $deenurp_simg'),
     nproc=15,
+    **images
 )
 
 ## begin analysis
-
 krona_data = []
 for_counts = []
-for label, r1, r2, refpkg_pth in inputs:
+for label, input in sections:
+    r1, r2 = input['r1'], input['r2']
+    refpkg_pth = input['refpkg']
+
     refpkg = get_refpkg(refpkg_pth)
 
     e = env.Clone(
         label=label,
         out='$out/$label',
-        binds='$binds,' + refpkg_pth,
+        refpkg=refpkg_pth,
     )
 
     # TODO: do this only once for each refpkg
     taxon_file = e.Command(
         target='$out/ref_taxonomy.txt',
         source=[refpkg.taxonomy, refpkg.seq_info],
-        action='$taxit lineage_table $SOURCES --taxonomy-table $TARGET'
+        action=('singularity exec --pwd $cwd -B $cwd,$refpkg $taxit_simg taxit '
+                'lineage_table $SOURCES --taxonomy-table $TARGET')
     )
 
     for_counts.append(r1)
 
     # barcode filter
-    max_reads = None
+    # TODO: move max_reads to settings.conf or data.conf
+    max_reads = 100000
     bcop_action = ('barcodecop ${SOURCES[0]} -f ${SOURCES[1]} '
                    '--outfile $TARGET '
                    '--match-filter '
@@ -123,9 +119,10 @@ for label, r1, r2, refpkg_pth in inputs:
     )
 
     # trim and quality filter
-    # TODO: implement downsample using -O?
     r1_cleaned, r2_cleaned, fqmcf_log = e.Command(
-        target=['$out/cleaned_R1.fastq.gz', '$out/cleaned_R2.fastq.gz', '$out/fastq_mcf.log'],
+        target=['$out/cleaned_R1.fastq.gz',
+                '$out/cleaned_R2.fastq.gz',
+                '$out/fastq_mcf.log'],
         source=['data/Illumina_adaptors_v2.fa', r1_bcop, r2_bcop],
         action=('$fastq_mcf -o ${TARGETS[0]} -o ${TARGETS[1]} '
                 '-D 0 -k 0 -q 5 -l 25 $SOURCES '
