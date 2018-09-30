@@ -11,6 +11,7 @@ from os import path
 import re
 from itertools import groupby
 from operator import itemgetter
+import configparser
 
 
 def main(arguments):
@@ -19,17 +20,24 @@ def main(arguments):
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    parser.add_argument('infile', type=argparse.FileType())
+    parser.add_argument('data_conf')
+    parser.add_argument('counts', type=argparse.FileType())
     parser.add_argument('-o', '--outfile', type=argparse.FileType('w'),
                         default=sys.stdout)
 
     args = parser.parse_args(arguments)
-    reader = csv.reader(args.infile)
+
+    data = configparser.ConfigParser(allow_no_value=True)
+    data.read(args.data_conf)
+    sections = list(data.items())[1:]  # exclude DEFAULT section
+    rawfiles = {section.get('r1'): label for label, section in data.items()}
+
+    reader = csv.reader(args.counts)
 
     rows = []
     for pth, count in reader:
-        if 'L00' in pth:
-            specimen = path.basename(pth).split('_')[0]
+        if pth in rawfiles:
+            specimen = rawfiles[pth]
             label = 'raw'
         else:
             __, specimen, fname = pth.split('/')

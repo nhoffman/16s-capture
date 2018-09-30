@@ -301,8 +301,8 @@ read_counts = env.Command(
 
 read_stats = env.Command(
     target='$out/read_stats.csv',
-    source=read_counts,
-    action='bin/read_stats.py $SOURCE -o $TARGET'
+    source=[data_file, read_counts],
+    action='bin/read_stats.py $SOURCES -o $TARGET'
 )
 
 # all krona plots
