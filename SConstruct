@@ -95,8 +95,8 @@ for label, input in sections:
 
     # barcode filter
     # TODO: move max_reads to settings.conf or data.conf
-    max_reads = 100000
-    bcop_action = ('barcodecop ${SOURCES[0]} -f ${SOURCES[1]} '
+    max_reads = None
+    bcop_action = ('barcodecop ${SOURCES[1:]} -f ${SOURCES[0]} '
                    '--outfile $TARGET '
                    '--match-filter '
                    '--qual-filter '
@@ -104,17 +104,23 @@ for label, input in sections:
     if max_reads:
         bcop_action += ' --head {}'.format(max_reads)
 
-    index_read = r1.replace('_R1_', '_I1_')
+    if input['indexing'] == 'single':
+        index_reads = [r1.replace('_R1_', '_I1_')]
+    elif input['indexing'] == 'dual':
+        index_reads = [r1.replace('_R1_', '_I1_'), r1.replace('_R1_', '_I2_')]
+    else:
+        raise ValueError('invalid value for indexing: "{}"'.format(input['indexing']))
+
     r1_bcop = e.Command(
         target='$out/r1_barcodecop.fastq.gz',
-        source=[index_read, r1],
+        source=[r1] + index_reads,
         action=bcop_action
     )
     for_counts.append(r1_bcop)
 
     r2_bcop = e.Command(
         target='$out/r2_barcodecop.fastq.gz',
-        source=[index_read, r2],
+        source=[r2] + index_reads,
         action=bcop_action
     )
 
