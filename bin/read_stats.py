@@ -40,7 +40,7 @@ def main(arguments):
             specimen = rawfiles[pth]
             label = 'raw'
         else:
-            __, specimen, fname = pth.split('/')
+            *__, specimen, fname = pth.split('/')
             label = (re.sub(r'\.fast[aq](\.gz)?$', '', fname.lower())
                      .replace('pear.', '')
                      .replace('_r1', '')
