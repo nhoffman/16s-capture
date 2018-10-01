@@ -30,7 +30,7 @@ def main(arguments):
     data = configparser.ConfigParser(allow_no_value=True)
     data.read(args.data_conf)
     sections = list(data.items())[1:]  # exclude DEFAULT section
-    rawfiles = {section.get('r1'): label for label, section in data.items()}
+    rawfiles = {section.get('r1'): label for label, section in sections}
 
     reader = csv.reader(args.counts)
 
