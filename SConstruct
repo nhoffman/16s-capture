@@ -258,7 +258,7 @@ for label, input in sections:
                 '--ref-msa ${SOURCES[0]} '
                 '--tree ${SOURCES[1]} '
                 '--query ${SOURCES[2]} '
-                '--model `python bin/get_model_descriptor.py ${SOURCES[3]}` '
+                '--model $$(python bin/get_model_descriptor.py ${SOURCES[3]}) '
                 '--outdir $out')
     )
 
@@ -279,7 +279,9 @@ for label, input in sections:
 
     # filter by likelihood and reformat
     classifications, lineages, krona_filtered = e.Command(
-        target=['$out/classifications.csv', '$out/lineages.csv', '$out/krona-${label}-filtered'],
+        target=['$out/classifications.csv',
+                '$out/lineages.csv',
+                '$out/krona-${label}-filtered'],
         source=per_pquery_assign,
         action=('bin/get_classifications.py $SOURCE '
                 '--classifications ${TARGETS[0]} '
