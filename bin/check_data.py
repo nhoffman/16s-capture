@@ -25,11 +25,31 @@ def main(arguments):
 
     sections = list(data.items())
     for name, sec in sections[1:]:
-        for key in ['r1', 'r2']:
-            pth = sec.get(key)
+
+        r1 = sec.get('r1')
+        r2 = sec.get('r2')
+
+        if sec.get('indexing') == 'single':
+            index_reads = [r1.replace('_R1_', '_I1_')]
+        elif sec.get('indexing') == 'dual':
+            index_reads = [r1.replace('_R1_', '_I1_'), r1.replace('_R1_', '_I2_')]
+        else:
+            raise ValueError('invalid value for indexing: "{}"'.format(sec.get('indexing')))
+
+        missing = []
+        for pth in [r1, r2] + index_reads:
             assert pth is not None
-            assert os.path.exists(pth)
-            print(pth)
+            if not os.path.exists(pth):
+                print('{} not found'.format(pth))
+                missing.append(pth)
+
+    if missing:
+        return 1
+    else:
+        print('ok')
+
+
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
