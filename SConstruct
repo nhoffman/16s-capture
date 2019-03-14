@@ -287,8 +287,8 @@ for label, input in sections:
                 '--classifications ${TARGETS[0]} '
                 '--lineages ${TARGETS[1]} '
                 '--krona ${TARGETS[2]} '
-                '--min-afract 0.5 '
-                '--min-total 0.75 '
+                '--min-afract 0.30 '
+                '--min-total 0.45 '
         )
     )
     Depends(classifications, 'bin/get_classifications.py')
