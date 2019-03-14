@@ -335,7 +335,7 @@ if krona_data:
 # save project state
 version_info = env.Command(
     target='$out/version_info.txt',
-    source=SConstruct,
+    source='SConstruct',
     action=('pwd > $out/$TARGET && '
             'git status >> $out/$TARGET && '
             'git --no-pager log -n1 >> $out/$TARGET ')
