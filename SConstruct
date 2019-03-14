@@ -332,17 +332,18 @@ if krona_data:
         action=krona_action
     )
 
-# save project state
-version_info = env.Command(
-    target='$out/version_info.txt',
-    source='SConstruct',
-    action=('pwd > $out/$TARGET && '
-            'git status >> $out/$TARGET && '
-            'git --no-pager log -n1 >> $out/$TARGET ')
-)
-
 conf_out = env.Command(
     target='$out/data.conf',
     source=conf_file,
     action=Copy('$TARGET', '$SOURCE')
 )
+
+# record project state
+version_info = env.Command(
+    target='$out/version_info.txt',
+    source='SConstruct',
+    action=('pwd > $TARGET && '
+            'git status >> $TARGET && '
+            'git --no-pager log -n1 >> $TARGET ')
+)
+Depends(version_info, read_stats)
