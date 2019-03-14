@@ -340,3 +340,9 @@ version_info = env.Command(
             'git status >> $out/$TARGET && '
             'git --no-pager log -n1 >> $out/$TARGET ')
 )
+
+conf_out = env.Command(
+    target='$out/data.conf',
+    source=conf_file,
+    action=Copy('$TARGET', '$SOURCE')
+)
