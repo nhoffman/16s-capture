@@ -16,7 +16,7 @@ def main(arguments):
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--infile', help="Input file", default='data/data.conf')
+    parser.add_argument('--infile', help="Input file", default='data.conf')
     args = parser.parse_args(arguments)
     print('checking {}\n'.format(args.infile))
 
@@ -29,7 +29,9 @@ def main(arguments):
         r1 = sec.get('r1')
         r2 = sec.get('r2')
 
-        if sec.get('indexing') == 'single':
+        if sec.get('barcodecop') == 'no':
+            index_reads = []
+        elif sec.get('indexing') == 'single':
             index_reads = [r1.replace('_R1_', '_I1_')]
         elif sec.get('indexing') == 'dual':
             index_reads = [r1.replace('_R1_', '_I1_'), r1.replace('_R1_', '_I2_')]
