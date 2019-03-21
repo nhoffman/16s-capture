@@ -31,7 +31,7 @@ images = {k + '_simg': v for k, v in conf['singularity'].items()
 
 krona_labels = conf.get('input', 'krona_labels')
 
-data_file = 'data.conf'
+data_file = conf.get('input', 'data_conf')
 data = configparser.ConfigParser(allow_no_value=True)
 data.read(data_file)
 
