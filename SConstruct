@@ -93,43 +93,48 @@ for label, input in sections:
 
     for_counts.append(r1)
 
-    # barcode filter
-    # TODO: move max_reads to settings.conf or data.conf
-    max_reads = None
-    bcop_action = ('barcodecop ${SOURCES[1:]} -f ${SOURCES[0]} '
-                   '--outfile $TARGET '
-                   '--match-filter '
-                   '--qual-filter '
-                   '--min-qual 30 ')
-    if max_reads:
-        bcop_action += ' --head {}'.format(max_reads)
+    if input['barcodecop'] == 'yes':
+        # barcode filter
+        # TODO: move max_reads to settings.conf or data.conf
+        max_reads = None
+        bcop_action = ('barcodecop ${SOURCES[1:]} -f ${SOURCES[0]} '
+                       '--outfile $TARGET '
+                       '--match-filter '
+                       '--qual-filter '
+                       '--min-qual 30 ')
+        if max_reads:
+            bcop_action += ' --head {}'.format(max_reads)
 
-    if input['indexing'] == 'single':
-        index_reads = [r1.replace('_R1_', '_I1_')]
-    elif input['indexing'] == 'dual':
-        index_reads = [r1.replace('_R1_', '_I1_'), r1.replace('_R1_', '_I2_')]
+        if input['indexing'] == 'single':
+            index_reads = [r1.replace('_R1_', '_I1_')]
+        elif input['indexing'] == 'dual':
+            index_reads = [r1.replace('_R1_', '_I1_'), r1.replace('_R1_', '_I2_')]
+        else:
+            raise ValueError('invalid value for indexing: "{}"'.format(input['indexing']))
+
+        r1_bcop = e.Command(
+            target='$out/r1_barcodecop.fastq.gz',
+            source=[r1] + index_reads,
+            action=bcop_action
+        )
+        for_counts.append(r1_bcop)
+
+        r2_bcop = e.Command(
+            target='$out/r2_barcodecop.fastq.gz',
+            source=[r2] + index_reads,
+            action=bcop_action
+        )
+
+        reads = [r1_bcop, r2_bcop]
     else:
-        raise ValueError('invalid value for indexing: "{}"'.format(input['indexing']))
-
-    r1_bcop = e.Command(
-        target='$out/r1_barcodecop.fastq.gz',
-        source=[r1] + index_reads,
-        action=bcop_action
-    )
-    for_counts.append(r1_bcop)
-
-    r2_bcop = e.Command(
-        target='$out/r2_barcodecop.fastq.gz',
-        source=[r2] + index_reads,
-        action=bcop_action
-    )
+        reads = [r1, r2]
 
     # trim and quality filter
     r1_cleaned, r2_cleaned, fqmcf_log = e.Command(
         target=['$out/cleaned_R1.fastq.gz',
                 '$out/cleaned_R2.fastq.gz',
                 '$out/fastq_mcf.log'],
-        source=['data/Illumina_adaptors_v2.fa', r1_bcop, r2_bcop],
+        source=['data/Illumina_adaptors_v2.fa'] + reads,
         action=('$fastq_mcf -o ${TARGETS[0]} -o ${TARGETS[1]} '
                 '-D 0 -k 0 -q 5 -l 25 $SOURCES '
                 '1> ${TARGETS[2]}')
