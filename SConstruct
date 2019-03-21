@@ -269,9 +269,9 @@ for label, input in sections:
 
     # classify
     # names of gappa targets appear to be hard-coded
-    labelled_tree, per_pquery_assign, gappa_profile, krona_raw = e.Command(
-        target=['$out/labelled_tree', '$out/per_pquery_assign',
-                '$out/profile.csv', '$out/krona-${label}-raw'],
+    labelled_tree, per_query, gappa_profile, krona_raw = e.Command(
+        target=['$out/labelled_tree.newick', '$out/per_query.tsv',
+                '$out/profile.tsv', '$out/krona-${label}-raw'],
         source=[epa_placements, taxon_file],
         action=[('$gappa analyze assign '
                 '--krona '
@@ -287,7 +287,7 @@ for label, input in sections:
         target=['$out/classifications.csv',
                 '$out/lineages.csv',
                 '$out/krona-${label}-filtered'],
-        source=per_pquery_assign,
+        source=per_query,
         action=('bin/get_classifications.py $SOURCE '
                 '--classifications ${TARGETS[0]} '
                 '--lineages ${TARGETS[1]} '

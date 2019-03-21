@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Reformat of output/per_pquery_assign (output of 'gappa assign')
+"""Reformat per_query.tsv (output of 'gappa assign')
 
 see https://github.com/lczech/gappa/wiki/Subcommand:-assign
 
@@ -11,16 +11,15 @@ Use "afract" for filtering, based on two criteria.
 
 Consider the following classification:
 
-NC_009617_Cbei_R0081
-0       0       1       1       k__Bacteria
-0       0       1       1       k__Bacteria;p__Firmicutes
-0       0       1       1       k__Bacteria;p__Firmicutes;c__Clostridia
-0       0       1       1       k__Bacteria;p__Firmicutes;c__Clostridia;o__Clostridiales
-0       0       1       1       k__Bacteria;p__Firmicutes;c__Clostridia;o__Clostridiales;f__Clostridiaceae
-0.5823  0.5823  1       1       k__Bacteria;p__Firmicutes;c__Clostridia;o__Clostridiales;f__Clostridiaceae;g__Clostridium
-0.2804  0.2804  0.2804  0.2804  k__Bacteria;p__Firmicutes;c__Clostridia;o__Clostridiales;f__Clostridiaceae;g__Clostridium;s__Clostridium_diolis
-0.1372  0.1372  0.1372  0.1372  k__Bacteria;p__Firmicutes;c__Clostridia;o__Clostridiales;f__Clostridiaceae;g__Clostridium;s__Clostridium_beijerinckii
-
+name    LWR     fract   aLWR    afract  taxopath
+seqname 0       0       0.9998  1       k__Bacteria
+seqname 0       0       0.9998  1       k__Bacteria;p__Bacteroidetes
+seqname 0       0       0.9998  1       k__Bacteria;p__Bacteroidetes;c__Bacteroidia
+seqname 0       0       0.9998  1       k__Bacteria;p__Bacteroidetes;c__Bacteroidia;o__Bacteroidales
+seqname 0       0       0.9998  1       k__Bacteria;p__Bacteroidetes;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae
+seqname 0.8704  0.8706  0.9998  1       k__Bacteria;p__Bacteroidetes;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Bacteroides
+seqname 2.37e-05        2.371e-05       2.37e-05        2.371e-05       k__Bacteria;p__Bacteroidetes;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Bacteroides;s__Bacteroides_vulgatus
+seqname 0.1293  0.1293  0.1293  0.1293  k__Bacteria;p__Bacteroidetes;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Bacteroides;s__Bacteroides_mediterraneensis
 """
 
 import os
@@ -60,38 +59,17 @@ def concat_names(taxnames, rank, sep='/', splitchar='_'):
     return name
 
 
-def parse_line(x, ranks=RANKS):
-    """Given a semicolon-delimited line from per_pquery_assign, return
-    a dict describing name, rank, classification, and alignment
-    statistics.
+def parse_row(row):
+    d = dict(row)
+    d['seqname'] = d.pop('name')
+    for key in ['LWR', 'fract', 'aLWR', 'afract']:
+        d[key] = float(d[key])
 
-    """
-    d = {}
-    for key in ['lwr', 'fract', 'alwr', 'afract']:
-        d[key] = float(x.pop(0))
-
-    classification = x[0].split(';')[-1]
-    rank, name = classification.split('__')
-    d['rank'] = ranks[rank]
-    d['name'] = name
+    classification = d.pop('taxopath').split(';')[-1]
+    rank, d['name'] = classification.split('__')
+    d['rank'] = RANKS[rank]
 
     return d
-
-
-def get_queries(fobj):
-
-    name, lines = None, []
-    for line in fobj:
-        spl = line.split()
-        if len(spl) == 1:
-            if name:
-                yield (name, lines)
-            name, lines = spl[0], []
-        else:
-            lines.append(parse_line(spl))
-
-    if name and lines:
-        yield (name, lines)
 
 
 def filter_lineages(lines, min_afract, min_total):
@@ -130,7 +108,8 @@ def main(arguments):
     args = parser.parse_args(arguments)
     rank_orders = {rank: i for i, rank in enumerate(RANKS.values(), 1)}
 
-    queries = get_queries(args.infile)
+    reader = csv.DictReader(args.infile, delimiter='\t')
+    queries = groupby(map(parse_row, reader), itemgetter('seqname'))
 
     if args.classifications:
         classif = csv.DictWriter(
