@@ -1,0 +1,65 @@
+157-28,unenriched-150 0
+157-29,unenriched-150 0.00001
+157-30,unenriched-150 0.000055
+157-31,unenriched-150 0.0001
+157-32,unenriched-150 0.001
+157-33,unenriched-150 0.01
+157-34,unenriched-150 0.1
+244-21,unenriched-400 0
+244-22,unenriched-400 0.00001
+244-23,unenriched-400 0.000055
+244-24,unenriched-400 0.0001
+244-25,unenriched-400 0.001
+244-26,unenriched-400 0.01
+244-27,unenriched-400 0.1
+364-21,LOD-150 0ng
+364-22,LOD-150 0.00001ng
+364-23,LOD-150 0.000055ng
+364-24,LOD-150 0.0001ng
+364-25,LOD-150 0.001ng
+364-26,LOD-150 0.01ng
+364-27,LOD-150 0.1ng
+411-32,BEI-150bp 0
+411-33,BEI-150bp 10
+411-34,BEI-150bp 100
+411-35,BEI-150bp 1000
+411-36,BEI-150bp 10000
+463-28,LOD-400 0ng
+463-29,LOD-400 0.00001ng
+463-30,LOD-400 0.000055ng
+463-31,LOD-400 0.0001ng
+463-32,LOD-400 0.001ng
+463-33,LOD-400 0.01ng
+463-34,LOD-400 0.1ng
+483-25,BEI-400bp 0
+483-26,BEI-400bp 10
+483-27,BEI-400bp 100
+483-28,BEI-400bp 1000
+483-29,BEI-400bp 10000
+483-31,case 2 control
+483-32,case 1 control
+483-33,case 1 (A25)
+483-34,case 2 (A36)
+483-35,spleen 1d 1.9ng
+483-36,spleen 1d 0ng
+483-37,spleen 1d 0.21ng
+483-38,spleen 1d 0.069ng
+528-25,spleen 5d 0ng
+528-26,spleen 5d 1.9ng
+528-27,spleen 5d 0.21ng
+528-28,spleen 5d 0.069ng
+613-21,LOD-150 0ng rep1
+613-22,LOD-150 0.00001ng rep1
+613-23,LOD -150 0.000055ng rep1
+613-24,LOD -150 0.0001ng rep1
+613-25,LOD -150 0.001ng rep1
+613-26,LOD -150 0.01ng rep1
+613-27,LOD -150 0.1ng rep1
+613-31,spleen 1d 0ng rep1
+613-32,spleen 1d 0.6ng rep1
+613-33,spleen 1d 1.9ng rep1
+613-34,spleen 5d 0ng rep1
+613-35,spleen 5d 0.06ng rep1
+613-36,spleen 5d 0.2ng rep1
+613-37,spleen 5d 0.6ng rep1
+613-38,spleen 5d 1.9ng rep1
