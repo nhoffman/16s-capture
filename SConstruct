@@ -59,8 +59,13 @@ env = Environment(
     epa=('singularity run --pwd $cwd -B $cwd,$refpkg $epa_simg'),
     gappa=('singularity run --pwd $cwd -B $cwd $gappa_simg'),
     krona=('singularity run --pwd $cwd -B $cwd $krona_simg'),
+    # TODO: most inputs reads are processed by barcodecop outside of a
+    # singularity image, but those for which barcodecop is skipped
+    # need to be accessed directly by fastq_mcf. For now hard-code a
+    # mounpointfor /molmicro/miseq_data to make sure they are
+    # accessible from the image.
     fastq_mcf=('singularity exec '
-               '--pwd $cwd -B $cwd $ea_utils_simg fastq-mcf'),
+               '--pwd $cwd -B $cwd,/molmicro/miseq_data $ea_utils_simg fastq-mcf'),
     super_deduper=('singularity exec '
                    '--pwd $cwd -B $cwd $htstream_simg hts_SuperDeduper'),
     deenurp_img=('singularity exec --pwd $cwd -B $cwd,$refpkg $deenurp_simg'),
