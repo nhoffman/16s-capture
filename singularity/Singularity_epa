@@ -1,33 +1,19 @@
 Bootstrap: docker
-From: debian
-
-
-%help
-
-This will run epa-ng.
-
-
-%labels
-
-    Maintainer NadiyaSitdykova
-
-    Version v1.0
+From: ubuntu:18.04
 
 %post
+    apt-get update -y
+    apt-get install -y --no-install-recommends \
+        autotools-dev libtool flex bison cmake automake autoconf git make gcc g++ zlib1g-dev
 
-    apt-get update -y && apt-get install -y --no-install-recommends autotools-dev libtool flex bison cmake automake autoconf git make gcc g++
+    mkdir -p /usr/local/src
+    cd /usr/local/src
 
-    cd /opt
-    
     git config --global http.sslVerify false
-
-    # clone the github repo
     git clone --recursive https://github.com/Pbdas/epa-ng.git
-     
     cd epa-ng
-
     make
+    cp bin/epa-ng /usr/local/bin
 
 %runscript
-
-    exec /opt/epa-ng/bin/epa-ng "$@"
+    exec /usr/local/bin/epa-ng "$@"
