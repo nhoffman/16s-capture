@@ -1,33 +1,18 @@
 Bootstrap: docker
-From: debian
-
-
-%help
-
-This will run gappa.
-
-
-%labels
-
-    Maintainer NadiyaSitdykova
-
-    Version v1.0
+From: ubuntu:18.04
 
 %post
+    apt-get update -y
+    apt-get install -y --no-install-recommends git make cmake gcc g++ zlib1g-dev
+    mkdir -p /usr/local/src
+    cd /usr/local/src
 
-    apt-get update -y && apt-get install -y --no-install-recommends git make cmake gcc g++
-
-    cd /opt
-    
     git config --global http.sslVerify false
-
-    # clone the github repo
     git clone --recursive https://github.com/lczech/gappa.git
-     
-    cd gappa
 
+    cd gappa
     make
+    cp bin/gappa /usr/local/bin
 
 %runscript
-
-    exec /opt/gappa/bin/gappa "$@"
+    exec /usr/local/bin/gappa "$@"
