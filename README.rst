@@ -10,7 +10,7 @@ create a virtualenv::
   python3 -m venv py3-env
   source py3-env/bin/activate
   pip install -U pip wheel
-  pip install scons
+  pip install scons==3.0.5
   pip install -r requirements.txt
 
 Extract PEAR binary: PEAR 0.9.11 binaries and sources were downloaded
