@@ -1,5 +1,7 @@
-scons
-seqmagick
-fastalite
-bioscons
 barcodecop
+bioscons
+fastalite
+matplotlib
+scons
+seaborn
+seqmagick

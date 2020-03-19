@@ -76,6 +76,8 @@ env = Environment(
 ## begin analysis
 krona_data = []
 for_counts = []
+deduped_R1 = {}
+deduped_R2 = {}
 for label, input in sections:
     r1, r2 = input['r1'], input['r2']
     refpkg_pth = input['refpkg']
@@ -159,6 +161,8 @@ for label, input in sections:
                 '--stats-file ${TARGETS[2]} ')
     )
     for_counts.append(r1_deduped)
+    deduped_R1[label] = r1_deduped
+    deduped_R2[label] = r2_deduped
 
     # assemble paired reads
     assembled_fq, discarded, r1_unassembled_fq, r2_unassembled_fq = e.Command(
@@ -322,6 +326,19 @@ read_stats = env.Command(
     source=[data_file, read_counts],
     action='read_stats.py $SOURCES -o $TARGET'
 )
+
+print(conf['150bp'])
+
+if '150bp' in conf.sections():
+    histogram = env.Command(
+        target='$out/150bp_histogram.png',
+        source=[deduped_R1[l] for l in conf['150bp']['samples'].split(',')],
+        action='histogram.py --title "150 bp enriched" $SOURCES $TARGET')
+if '400bp' in conf.sections():
+    histogram = env.Command(
+        target='$out/400bp_histogram.png',
+        source=[deduped_R1[l] for l in conf['400bp']['samples'].split(',')],
+        action='histogram.py --title "400 bp enriched" $SOURCES $TARGET')
 
 # all krona plots
 if krona_data:
