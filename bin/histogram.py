@@ -35,7 +35,7 @@ def main(arguments):
         ylabel='distribution')
     seaborn.kdeplot(lengths, shade=True, ax=ax)
     matplotlib.pyplot.suptitle('Sequence lengths', size=18)
-    fig.savefig(args.out)
+    fig.savefig(args.out, format='pdf')
 
 
 if __name__ == '__main__':

@@ -327,16 +327,14 @@ read_stats = env.Command(
     action='read_stats.py $SOURCES -o $TARGET'
 )
 
-print(conf['150bp'])
-
 if '150bp' in conf.sections():
     histogram = env.Command(
-        target='$out/150bp_histogram.png',
+        target='$out/150bp_histogram.pdf',
         source=[deduped_R1[l] for l in conf['150bp']['samples'].split(',')],
         action='histogram.py --title "150 bp enriched" $SOURCES $TARGET')
 if '400bp' in conf.sections():
     histogram = env.Command(
-        target='$out/400bp_histogram.png',
+        target='$out/400bp_histogram.pdf',
         source=[deduped_R1[l] for l in conf['400bp']['samples'].split(',')],
         action='histogram.py --title "400 bp enriched" $SOURCES $TARGET')
 
