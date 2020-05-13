@@ -25,3 +25,41 @@ Build the Singularity images::
   mkdir -p singularity_images
   for fn in singularity/*; do sudo singularity build singularity_images/${fn#singularity/Singularity_}.simg $fn; done
 
+methods
+=======
+
+Reference set creation
+----------------------
+
+A bacteria mock community of 16S rRNA gene reference sequences was acquired 
+and assembed from BEI Resources and aligned and used to create phylogenetic 
+trees [1].  Two additional reference packages were assembled by recruiting 
+16S rRNA reference sequences from a ya16sdb 0.4 curated set of NCBI 16s 
+sequences [2] and selecting based on similarity to clinical specimens using 
+DeeNuRP 0.2.4 search-sequences and select-references [3][4].  
+
+16s Classification
+------------------
+
+Illumina MiSeq reads were filtered, trimmed, deduplicated and assembled using 
+barcodecop 0.5 [5], ea-utils 1.04.807 fastqc-mcf [6], 
+HTStream 0.3.0 SuperDeduper [7] and PEAR 0.9.11 [8] respectively.  16s reads 
+were selected using Infernal 1.1.2 cmsearch and aligned using cmalign [9].  
+The resulting alignments were merged with reference alignments 
+(using 'esl-alimerge') to place all sequences in the same alignment register. 
+Query sequences were then placed on a phylogenetic tree of reference sequences 
+using epa-ng 0.3.5 [10] and classified using gappa 0.2.4 [11]. The full Python 
+Scons pipeline is available for evalutation at 
+https://github.com/salipante/16s-capture.git.
+
+1. bei resources
+2. https://github.com/nhoffman/ya16sdb
+3. https://github.com/fhcrc/deenurp/tree/master/deenurp
+4. https://doi.org/10.1371/journal.pone.0065226
+5. https://github.com/nhoffman/barcodecop
+6. https://github.com/ExpressionAnalysis/ea-utils
+7. https://github.com/ibest/HTStream
+8. https://doi.org/10.1093/bioinformatics/btt593
+9. https://doi.org/10.1093/bioinformatics/btt509
+10. https://doi.org/10.1093/sysbio/syy054
+11. https://doi.org/10.1093/bioinformatics/btaa070
