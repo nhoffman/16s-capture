@@ -221,6 +221,24 @@ for label, input in sections:
     Depends(seqs_16s, 'bin/cmfilter.py')
     for_counts.extend([seqs_16s, seqs_not16s])
 
+    # start extract SRA submission fastqs
+    # TODO: index_sra??
+    seqs_16s_ids = e.Command(
+        target='$out/seqs-16s.txt',
+        source=seqs_16s,
+        action='seqmagick extract-ids $SOURCE > $TARGET')
+
+    r1_sra = e.Command(
+        target='$out/seqs-16s-deduped_R1.fastq.gz',
+        source=[seqs_16s_ids, r1_deduped],
+        action='seqmagick convert --include-from-file $SOURCES $TARGET')
+
+    r2_sra = e.Command(
+        target='$out/seqs-16s-deduped_R2.fastq.gz',
+        source=[seqs_16s_ids, r2_deduped],
+        action='seqmagick convert --include-from-file $SOURCES $TARGET')
+    # end SRA submission data
+
     # align input seqs with cmalign
     query_sto, cmalign_scores = e.Command(
         target=['$out/query.sto', '$out/cmalign.scores'],
