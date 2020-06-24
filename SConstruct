@@ -29,7 +29,10 @@ conf.read(conf_file)
 images = {k + '_simg': v for k, v in conf['singularity'].items()
           if k not in set(conf['DEFAULT'].keys()) and not k.startswith('_')}
 
-krona_labels = conf.get('input', 'krona_labels')
+if 'krona_labels' in conf:
+    krona_labels = conf.get('input', 'krona_labels')
+else:
+    krona_labels = None
 
 data_file = conf.get('input', 'data_conf')
 data = configparser.ConfigParser(allow_no_value=True)
@@ -69,7 +72,7 @@ env = Environment(
     super_deduper=('singularity exec '
                    '--pwd $cwd -B $cwd $htstream_simg hts_SuperDeduper'),
     deenurp_img=('singularity exec --pwd $cwd -B $cwd,$refpkg $deenurp_simg'),
-    nproc=15,
+    nproc=5,
     **images
 )
 
