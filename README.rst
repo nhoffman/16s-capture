@@ -1,13 +1,13 @@
-================
- EPA evaluation
-================
+===========================
+ 16S rRNA Capture Pipeline
+===========================
 
 Pipleine code for "Sensitive identification of bacterial DNA in clinical specimens by broad range 16S rRNA enrichment"
 
-Sara Rassoulian Barrett [1]_, Noah G. Hoffman [1]_, Christopher Rosenthal [1]_, Andrew Bryan [1]_, Desiree A. Marshall [2]_, Joshua Lieberman [1]_, Brad T. Cookson [1]_, Stephen J. Salipante [1]_ (corresponding author)
+Sara Rassoulian Barrett [1], Noah G. Hoffman [1], Christopher Rosenthal [1], Andrew Bryan [1], Desiree A. Marshall [2], Joshua Lieberman [1], Brad T. Cookson [1], Stephen J. Salipante [1] (corresponding author)
 
-.. [1] Department of Laboratory Medicine, University of Washington, Seattle, WA, USA
-.. [2] Department of Pathology, University of Washington, Seattle, WA, USA
+- [1] Department of Laboratory Medicine, University of Washington, Seattle, WA, USA
+- [2] Department of Pathology, University of Washington, Seattle, WA, USA
 
 setup
 =====
