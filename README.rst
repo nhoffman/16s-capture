@@ -2,6 +2,13 @@
  EPA evaluation
 ================
 
+Pipleine code for "Sensitive identification of bacterial DNA in clinical specimens by broad range 16S rRNA enrichment"
+
+Sara Rassoulian Barrett [1]_, Noah G. Hoffman [1]_, Christopher Rosenthal [1]_, Andrew Bryan [1]_, Desiree A. Marshall [2]_, Joshua Lieberman [1]_, Brad T. Cookson [1]_, Stephen J. Salipante [1]_ (corresponding author)
+
+.. [1] Department of Laboratory Medicine, University of Washington, Seattle, WA, USA
+.. [2] Department of Pathology, University of Washington, Seattle, WA, USA
+
 setup
 =====
 
@@ -31,25 +38,25 @@ methods
 Reference set creation
 ----------------------
 
-A bacteria mock community of 16S rRNA gene reference sequences was acquired 
-and assembed from BEI Resources and aligned and used to create phylogenetic 
-trees [1].  Two additional reference packages were assembled by recruiting 
-16S rRNA reference sequences from a ya16sdb 0.4 curated set of NCBI 16s 
-sequences [2] and selecting based on similarity to clinical specimens using 
-DeeNuRP 0.2.4 search-sequences and select-references [3][4].  
+A bacteria mock community of 16S rRNA gene reference sequences was acquired
+and assembed from BEI Resources and aligned and used to create phylogenetic
+trees [1].  Two additional reference packages were assembled by recruiting
+16S rRNA reference sequences from a ya16sdb 0.4 curated set of NCBI 16s
+sequences [2] and selecting based on similarity to clinical specimens using
+DeeNuRP 0.2.4 search-sequences and select-references [3][4].
 
 16s Classification
 ------------------
 
-Illumina MiSeq reads were filtered, trimmed, deduplicated and assembled using 
-barcodecop 0.5 [5], ea-utils 1.04.807 fastqc-mcf [6], 
-HTStream 0.3.0 SuperDeduper [7] and PEAR 0.9.11 [8] respectively.  16s reads 
-were selected using Infernal 1.1.2 cmsearch and aligned using cmalign [9].  
-The resulting alignments were merged with reference alignments 
-(using 'esl-alimerge') to place all sequences in the same alignment register. 
-Query sequences were then placed on a phylogenetic tree of reference sequences 
-using epa-ng 0.3.5 [10] and classified using gappa 0.2.4 [11]. The full Python 
-Scons pipeline is available for evalutation at 
+Illumina MiSeq reads were filtered, trimmed, deduplicated and assembled using
+barcodecop 0.5 [5], ea-utils 1.04.807 fastqc-mcf [6],
+HTStream 0.3.0 SuperDeduper [7] and PEAR 0.9.11 [8] respectively.  16s reads
+were selected using Infernal 1.1.2 cmsearch and aligned using cmalign [9].
+The resulting alignments were merged with reference alignments
+(using 'esl-alimerge') to place all sequences in the same alignment register.
+Query sequences were then placed on a phylogenetic tree of reference sequences
+using epa-ng 0.3.5 [10] and classified using gappa 0.2.4 [11]. The full Python
+Scons pipeline is available for evalutation at
 https://github.com/salipante/16s-capture.git.
 
 1. bei resources
